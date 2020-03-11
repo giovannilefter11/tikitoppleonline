@@ -8,18 +8,28 @@ const socketio = require("socket.io")(http);
 
 // costanti dell'app
 const steps = 33; // numero di tasselli nel gioco
-const maxPlayersNumber = 4; // numero di giocatori
+const maxPlayersNumber = 4000; // numero di giocatori
 const playerColors = ["red", "blue", "yellow", "green"]; // colori standard dei giocatori
-const blocks = [ // blocchetti che si muoveranno
-    { name: "HUHU", color: "yellow" },
-    { name: "WIKIKI", color: "lightblue" },
-    { name: "AKAMAI", color: "orange" },
-    { name: "NUI", color: "green" },
-    { name: "KAPU", color: "pink" },
-    { name: "NANI", color: "red" },
-    { name: "LOKANI", color: "purple" },
-    { name: "EEPO", color: "brown" },
-    { name: "HOOKIPA", color: "grey" },
+let blocks = [ // blocchetti che si muoveranno
+    { name: "😎", color: "yellow", position: 0 }, // HUHU
+    { name: "😒", color: "lightblue", position: 1 }, // WIKIKI
+    { name: "🐱‍🚀", color: "orange", position: 2 }, // AKAMAI
+    { name: "🤔", color: "green", position: 3 }, // NUI
+    { name: "😍", color: "pink", position: 4 }, // KAPU
+    { name: "🤬", color: "red", position: 5 }, // NANI
+    { name: "🧐", color: "purple", position: 6 }, // LOKANI
+    { name: "🤐", color: "brown", position: 7 }, // EEPO
+    { name: "😤", color: "grey", position: 8 }, // HOOKIPA
+];
+let cards = [
+    // nome del blocco, tasselli che bisogna selezionare lato utente che gioca la carta, azione che compirà
+    { name: "TIKI-WIKI", blocksNumber: 2, action: "invert", usable: true},
+    { name: "TIKI-PUH", blocksNumber: 1, action: "minus-two", usable: true},
+    { name: "TIKI-UP-1", blocksNumber: 1, action: "plus-one", usable: true},
+    { name: "TIKI-UP-2", blocksNumber: 1, action: "plus-two", usable: true},
+    { name: "TIKI-UP-3", blocksNumber: 1, action: "plus-three", usable: true},
+    { name: "TIKI-TOAST", blocksNumber: 1, action: "delete", usable: true},
+    { name: "TIKI-TOPPLE", blocksNumber: 1, action: "to-bottom", usable: true},
 ];
 
 let activePlayersClients = []; // array coi giocatori attivi
@@ -49,8 +59,18 @@ socketio.on("connection", socket => {
             socket.emit("emit-color", color);
             console.log("giocatori attivi: " + activePlayersClients.length);
             socket.emit('send-msg', 'Sei il ' + color);
+            // il broadcast emette eventi per tutti tranne lui
             socket.broadcast.emit('send-msg', 'Si è connesso il giocatore ' + color);
         });
+
+        socket.emit('emit-blocks', blocks);
+
+        socket.emit('emit-cards', cards);
+
+        socket.on("card-used", card => {
+            let player = getActivePlayerWithSocket(socket);
+            socketio.emit("send-msg", "Giocatore " + player.color + " ha usato " + card.name);
+        })
     }
 
     // socket.on("disconnect", () => {
@@ -92,6 +112,21 @@ function existsActivePlayersWithColor(color){
     activePlayersClients.map(p =>{
         if(p.color === color) {
             ret = true;
+        }
+    });
+    return ret;
+}
+
+/**
+ * otteniamo l'utente attivo con questo socket
+ * @param socket
+ * @returns {boolean}
+ */
+function getActivePlayerWithSocket(socket){
+    let ret = null;
+    activePlayersClients.map(p =>{
+        if(p.socket === socket) {
+            ret = p;
         }
     });
     return ret;
